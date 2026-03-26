@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Json-clean</title>
+    <link rel="apple-touch-icon" href="image_26.png">
+    <link rel="icon" type="image/png" href="image_26.png">
+    <style>
+        :root {
+            --bg: #fff;
+            --main: #333;
+            --accent: #eee;
+            --radius: 15px;
+            --error: #e74c3c;
+        }
+
+        * { 
+            box-sizing: border-box; 
+            -webkit-tap-highlight-color: transparent; 
+            margin: 0; padding: 0;
+            touch-action: manipulation; 
+        }
+
+        body {
+            background-color: var(--bg); color: var(--main);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            display: flex; flex-direction: column; align-items: center; min-height: 100vh;
+            padding: calc(env(safe-area-inset-top, 20px) + 15px) 15px calc(env(safe-area-inset-bottom, 10px) + 15px) 15px;
+        }
+
+        .fridge-container { width: 100%; max-width: 420px; display: flex; flex-direction: column; align-items: center; flex-grow: 1; }
+        
+        header { text-align: center; margin-bottom: 25px; }
+        h1 { font-size: 2rem; font-weight: 800; letter-spacing: -1px; }
+        .subtitle { color: #999; font-size: 0.85rem; font-weight: 500; }
+
+        /* Main Area */
+        .workspace { width: 100%; display: flex; flex-direction: column; gap: 15px; flex-grow: 1; margin-bottom: 20px; }
+
+        .input-header { display: flex; justify-content: space-between; align-items: center; padding: 0 5px; }
+        .input-label { font-size: 0.75rem; font-weight: 800; color: #999; text-transform: uppercase; }
+        #statusLabel { font-size: 0.75rem; font-weight: 800; color: #bbb; }
+
+        textarea {
+            width: 100%; flex-grow: 1; min-height: 300px;
+            padding: 20px; border-radius: var(--radius);
+            border: 1px solid var(--accent); background: #fafafa;
+            font-family: "SF Mono", Menlo, Consolas, monospace;
+            font-size: 0.9rem; line-height: 1.5; color: var(--main);
+            outline: none; resize: none;
+            transition: border-color 0.2s;
+        }
+        textarea:focus { border-color: var(--main); }
+        textarea.error { border-color: var(--error); color: var(--error); }
+
+        /* Controls */
+        .action-row { display: flex; gap: 10px; width: 100%; }
+        
+        .btn {
+            flex: 1; padding: 20px; border-radius: var(--radius);
+            font-size: 1rem; font-weight: 800; border: none; cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .btn-main { background: var(--main); color: #fff; }
+        .btn-sub { background: var(--accent); color: var(--main); }
+        .btn:active { transform: scale(0.98); opacity: 0.9; }
+
+        /* Common Footer Parts */
+        .footer-btns { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: auto; padding: 20px 0; }
+        .kofi-btn, .home-btn {
+            display: inline-flex; align-items: center; padding: 12px 20px;
+            border-radius: var(--radius); font-weight: bold; font-size: 0.85rem; text-decoration: none;
+        }
+        .kofi-btn { background: var(--main); color: #fff; }
+        .home-btn { background: var(--accent); color: var(--main); border: none; cursor: pointer; }
+
+        footer { font-size: 0.7rem; color: #bbb; text-align: center; line-height: 1.6; }
+
+        #toast {
+            position: fixed; bottom: 100px; background: rgba(0,0,0,0.8); color: #fff;
+            padding: 10px 20px; border-radius: 20px; font-size: 0.8rem; font-weight: bold;
+            opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 2000;
+        }
+
+        /* Modal (憲法遵守) */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: #fff; padding: 30px; border-radius: 20px; max-width: 320px; width: 90%; position: relative; text-align: left;}
+        .modal-title-row { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; font-size: 1.2rem; font-weight: 800;}
+        .close-icon { position: absolute; top: 15px; right: 20px; font-size: 1.5rem; color: #aaa; cursor: pointer; padding: 5px; }
+    </style>
+</head>
+<body>
+
+<div class="fridge-container">
+    <header>
+        <h1>Json-clean</h1>
+        <p class="subtitle">Make messy JSON readable instantly.</p>
+    </header>
+
+    <div class="workspace">
+        <div class="input-header">
+            <span class="input-label">Paste JSON here</span>
+            <span id="statusLabel">Standby</span>
+        </div>
+        <textarea id="jsonArea" placeholder='{"id":1,"status":"ok"}' spellcheck="false"></textarea>
+    </div>
+
+    <div class="action-row">
+        <button class="btn btn-sub" id="clrBtn">Clear</button>
+        <button class="btn btn-main" id="copyBtn">Copy Clean JSON</button>
+    </div>
+
+    <div class="footer-btns">
+        <a href="https://ko-fi.com/afrorakda" target="_blank" class="kofi-btn">🍵 Support me on Ko-fi</a>
+        <button class="home-btn" id="homeBtn">Add to Home Screen</button>
+    </div>
+
+    <footer>
+        No login / No tracking / No ads / Browser only<br>
+        afrorakda © 2026
+    </footer>
+</div>
+
+<div id="toast">Copied!</div>
+
+<div id="modal" class="modal">
+    <div class="modal-content">
+        <span class="close-icon" id="closeModal">&times;</span>
+        <div class="modal-title-row"><span>📱</span><strong>Install</strong></div>
+        <p style="margin-bottom: 20px; color: #666; font-size: 0.9rem;">Add to home screen.</p>
+        <div style="font-size: 0.95rem; line-height: 1.5; color: #333;">
+            <p>🍏 <strong>iPhone:</strong> Share > Add to Home Screen</p>
+            <p style="margin-top:10px;">🤖 <strong>Android:</strong> Menu > Add to home screen</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    const area = document.getElementById('jsonArea');
+    const status = document.getElementById('statusLabel');
+    const clrBtn = document.getElementById('clrBtn');
+    const copyBtn = document.getElementById('copyBtn');
+    const toast = document.getElementById('toast');
+
+    function formatJSON() {
+        const val = area.value.trim();
+        if (!val) {
+            resetStatus();
+            return;
+        }
+
+        try {
+            const parsed = JSON.parse(val);
+            // 整形実行（スペース2つでインデント）
+            const cleaned = JSON.stringify(parsed, null, 2);
+            area.value = cleaned;
+            area.classList.remove('error');
+            status.textContent = "Cleaned!";
+            status.style.color = "#2ecc71"; // Success Green
+        } catch (e) {
+            area.classList.add('error');
+            status.textContent = "Invalid JSON";
+            status.style.color = "var(--error)";
+        }
+    }
+
+    function resetStatus() {
+        area.classList.remove('error');
+        status.textContent = "Standby";
+        status.style.color = "#bbb";
+    }
+
+    // 入力（貼り付け）された瞬間に実行
+    area.oninput = formatJSON;
+
+    clrBtn.onclick = () => {
+        area.value = "";
+        resetStatus();
+        area.focus();
+    };
+
+    copyBtn.onclick = () => {
+        if (!area.value || area.classList.contains('error')) return;
+        navigator.clipboard.writeText(area.value).then(() => {
+            toast.style.opacity = '1';
+            setTimeout(() => toast.style.opacity = '0', 1500);
+        });
+    };
+
+    // Modal
+    document.getElementById('homeBtn').onclick = () => document.getElementById('modal').style.display = 'flex';
+    document.getElementById('closeModal').onclick = () => document.getElementById('modal').style.display = 'none';
+    window.onclick = (e) => { if (e.target == document.getElementById('modal')) document.getElementById('modal').style.display = 'none'; };
+</script>
+
+</body>
+</html>
