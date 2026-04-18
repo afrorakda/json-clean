@@ -61,20 +61,26 @@
         textarea.error { border-color: var(--error); color: var(--error); -webkit-text-fill-color: var(--error); }
         textarea::placeholder { color: var(--placeholder); -webkit-text-fill-color: var(--placeholder); }
 
-        /* クリアボタン（右下配置） */
         .clr-btn {
-            position: absolute; bottom: 15px; right: 15px; width: 30px; height: 30px;
-            background: rgba(0,0,0,0.05); color: #ccc; border: none; border-radius: 8px;
-            font-size: 18px; font-weight: bold; cursor: pointer; display: none;
+            position: absolute; bottom: 15px; right: 15px; width: 34px; height: 34px;
+            background: rgba(0,0,0,0.05); color: #ccc; border: none; border-radius: 10px;
+            font-size: 20px; font-weight: bold; cursor: pointer; display: none;
             align-items: center; justify-content: center; z-index: 10;
         }
         .clr-btn:active { background: var(--accent); }
 
         .action-row { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; width: 100%; }
-        .btn { padding: 20px; border-radius: var(--radius); font-size: 0.95rem; font-weight: 800; border: none; cursor: pointer; }
+        .btn { 
+            padding: 20px; border-radius: var(--radius); font-size: 0.95rem; font-weight: 800; border: none; cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+        }
         .btn-main { background: var(--main); color: #fff; }
         .btn-sub { background: var(--accent); color: var(--main); }
         .btn:active { transform: scale(0.98); opacity: 0.9; }
+
+        /* 反転演出用クラス */
+        .btn-active-invert { background: #eee !important; color: #333 !important; }
+        .btn-sub-invert { background: #333 !important; color: #eee !important; }
 
         .footer-btns { margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 40px 0 30px; }
         .kofi-btn, .home-btn {
@@ -86,12 +92,6 @@
 
         footer { font-size: 0.75rem; color: #bbb; text-align: center; padding-bottom: 20px; font-weight: 600; line-height: 1.6; }
         footer a { color: inherit; text-decoration: underline; }
-
-        #toast {
-            position: fixed; bottom: 80px; background: var(--main); color: #fff;
-            padding: 10px 20px; border-radius: 20px; font-size: 0.8rem; font-weight: 800;
-            opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 2000;
-        }
 
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 3000; }
         .modal-content { background: #fff; padding: 30px; border-radius: var(--radius); width: 85%; max-width: 320px; position: relative; text-align: center; }
@@ -134,8 +134,6 @@
     </footer>
 </div>
 
-<div id="toast">Copied!</div>
-
 <div id="modal" class="modal">
     <div class="modal-content">
         <span class="close-icon" id="closeModal">&times;</span>
@@ -154,9 +152,8 @@
     const innerClrBtn = document.getElementById('innerClrBtn');
     const minifyBtn = document.getElementById('minifyBtn');
     const copyBtn = document.getElementById('copyBtn');
-    const toast = document.getElementById('toast');
 
-    function processJSON(minify = false) {
+    function processJSON(isMinify = false) {
         const val = area.value.trim();
         if (!val) {
             resetStatus();
@@ -164,12 +161,16 @@
         }
         try {
             const parsed = JSON.parse(val);
-            const result = minify ? JSON.stringify(parsed) : JSON.stringify(parsed, null, 2);
+            const result = isMinify ? JSON.stringify(parsed) : JSON.stringify(parsed, null, 2);
             area.value = result;
             area.classList.remove('error');
-            status.textContent = minify ? "Minified!" : "Cleaned!";
+            status.textContent = isMinify ? "Minified!" : "Cleaned!";
             status.style.color = "#2ecc71";
             innerClrBtn.style.display = "flex";
+
+            if (isMinify) {
+                flashButton(minifyBtn, "Minified!", "btn-sub-invert");
+            }
         } catch (e) {
             area.classList.add('error');
             status.textContent = "Invalid JSON";
@@ -182,6 +183,16 @@
         status.textContent = "Standby";
         status.style.color = "#bbb";
         innerClrBtn.style.display = "none";
+    }
+
+    function flashButton(btn, tempText, invertClass) {
+        const originalText = btn.textContent;
+        btn.textContent = tempText;
+        btn.classList.add(invertClass);
+        setTimeout(() => {
+            btn.textContent = originalText;
+            btn.classList.remove(invertClass);
+        }, 1200);
     }
 
     area.oninput = () => {
@@ -200,15 +211,9 @@
     copyBtn.onclick = () => {
         if (!area.value || area.classList.contains('error')) return;
         navigator.clipboard.writeText(area.value).then(() => {
-            showToast("Copied to clipboard!");
+            flashButton(copyBtn, "Copied!", "btn-active-invert");
         });
     };
-
-    function showToast(msg) {
-        toast.textContent = msg;
-        toast.style.opacity = '1';
-        setTimeout(() => toast.style.opacity = '0', 2000);
-    }
 
     document.getElementById('homeBtn').onclick = () => document.getElementById('modal').style.display = 'flex';
     document.getElementById('closeModal').onclick = () => document.getElementById('modal').style.display = 'none';
