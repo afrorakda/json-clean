@@ -44,11 +44,12 @@
             background: var(--accent); padding: 8px 12px; border-radius: 10px;
         }
 
-        .workspace { width: 100%; display: flex; flex-direction: column; gap: 10px; flex-grow: 1; margin-bottom: 20px; }
+        .workspace { width: 100%; display: flex; flex-direction: column; gap: 10px; flex-grow: 1; margin-bottom: 20px; position: relative; }
         .input-header { display: flex; justify-content: space-between; align-items: center; padding: 0 5px; }
         .input-label { font-size: 0.7rem; font-weight: 800; color: #bbb; text-transform: uppercase; letter-spacing: 0.5px; }
         #statusLabel { font-size: 0.75rem; font-weight: 800; color: #bbb; }
 
+        .textarea-wrapper { position: relative; flex-grow: 1; display: flex; flex-direction: column; }
         textarea {
             width: 100%; flex-grow: 1; min-height: 300px; padding: 20px; 
             border-radius: var(--radius); border: 2px solid var(--accent); background: var(--input-bg);
@@ -60,8 +61,17 @@
         textarea.error { border-color: var(--error); color: var(--error); -webkit-text-fill-color: var(--error); }
         textarea::placeholder { color: var(--placeholder); -webkit-text-fill-color: var(--placeholder); }
 
-        .action-row { display: flex; gap: 10px; width: 100%; }
-        .btn { flex: 1; padding: 20px; border-radius: var(--radius); font-size: 1rem; font-weight: 800; border: none; cursor: pointer; }
+        /* クリアボタン（右下配置） */
+        .clr-btn {
+            position: absolute; bottom: 15px; right: 15px; width: 30px; height: 30px;
+            background: rgba(0,0,0,0.05); color: #ccc; border: none; border-radius: 8px;
+            font-size: 18px; font-weight: bold; cursor: pointer; display: none;
+            align-items: center; justify-content: center; z-index: 10;
+        }
+        .clr-btn:active { background: var(--accent); }
+
+        .action-row { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; width: 100%; }
+        .btn { padding: 20px; border-radius: var(--radius); font-size: 0.95rem; font-weight: 800; border: none; cursor: pointer; }
         .btn-main { background: var(--main); color: #fff; }
         .btn-sub { background: var(--accent); color: var(--main); }
         .btn:active { transform: scale(0.98); opacity: 0.9; }
@@ -101,11 +111,14 @@
             <span class="input-label">Paste JSON here</span>
             <span id="statusLabel">Standby</span>
         </div>
-        <textarea id="jsonArea" placeholder='{"id":1,"status":"ok"}' spellcheck="false"></textarea>
+        <div class="textarea-wrapper">
+            <textarea id="jsonArea" placeholder='{"id":1,"status":"ok"}' spellcheck="false"></textarea>
+            <button class="clr-btn" id="innerClrBtn">×</button>
+        </div>
     </div>
 
     <div class="action-row">
-        <button class="btn btn-sub" id="clrBtn">Clear</button>
+        <button class="btn btn-sub" id="minifyBtn">Minify</button>
         <button class="btn btn-main" id="copyBtn">Copy Clean JSON</button>
     </div>
 
@@ -138,11 +151,12 @@
 <script>
     const area = document.getElementById('jsonArea');
     const status = document.getElementById('statusLabel');
-    const clrBtn = document.getElementById('clrBtn');
+    const innerClrBtn = document.getElementById('innerClrBtn');
+    const minifyBtn = document.getElementById('minifyBtn');
     const copyBtn = document.getElementById('copyBtn');
     const toast = document.getElementById('toast');
 
-    function formatJSON() {
+    function processJSON(minify = false) {
         const val = area.value.trim();
         if (!val) {
             resetStatus();
@@ -150,11 +164,12 @@
         }
         try {
             const parsed = JSON.parse(val);
-            const cleaned = JSON.stringify(parsed, null, 2);
-            area.value = cleaned;
+            const result = minify ? JSON.stringify(parsed) : JSON.stringify(parsed, null, 2);
+            area.value = result;
             area.classList.remove('error');
-            status.textContent = "Cleaned!";
+            status.textContent = minify ? "Minified!" : "Cleaned!";
             status.style.color = "#2ecc71";
+            innerClrBtn.style.display = "flex";
         } catch (e) {
             area.classList.add('error');
             status.textContent = "Invalid JSON";
@@ -166,23 +181,34 @@
         area.classList.remove('error');
         status.textContent = "Standby";
         status.style.color = "#bbb";
+        innerClrBtn.style.display = "none";
     }
 
-    area.oninput = formatJSON;
+    area.oninput = () => {
+        innerClrBtn.style.display = area.value ? "flex" : "none";
+        processJSON(false);
+    };
 
-    clrBtn.onclick = () => {
+    innerClrBtn.onclick = () => {
         area.value = "";
         resetStatus();
         area.focus();
     };
 
+    minifyBtn.onclick = () => processJSON(true);
+
     copyBtn.onclick = () => {
         if (!area.value || area.classList.contains('error')) return;
         navigator.clipboard.writeText(area.value).then(() => {
-            toast.style.opacity = '1';
-            setTimeout(() => toast.style.opacity = '0', 2000);
+            showToast("Copied to clipboard!");
         });
     };
+
+    function showToast(msg) {
+        toast.textContent = msg;
+        toast.style.opacity = '1';
+        setTimeout(() => toast.style.opacity = '0', 2000);
+    }
 
     document.getElementById('homeBtn').onclick = () => document.getElementById('modal').style.display = 'flex';
     document.getElementById('closeModal').onclick = () => document.getElementById('modal').style.display = 'none';
